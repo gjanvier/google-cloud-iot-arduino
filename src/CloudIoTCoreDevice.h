@@ -21,51 +21,46 @@
 
 class CloudIoTCoreDevice {
  private:
-  const char *project_id;
-  const char *location;
-  const char *registry_id;
-  const char *device_id;
-  const char *private_key;
+  char project_id[32];
+  char location[32];
+  char registry_id[32];
+  char device_id[32];
 
   NN_DIGIT priv_key[9];
-  String jwt;
+
+  char jwt[JWT_MAX_LENGTH];
   unsigned long iss = 0;
+  unsigned long exp = 0;
   int jwt_exp_secs = 3600;
 
-  void fillPrivateKey();
-  String getBasePath();
+  CloudIoTCoreDevice &setPrivateKey(const char *private_key);
+  void createJWT(long long int current_time);
+  void getFullPath(const char* path, char* out);
 
  public:
-  CloudIoTCoreDevice();
-  CloudIoTCoreDevice(const char *project_id, const char *location,
-                     const char *registry_id, const char *device_id);
   CloudIoTCoreDevice(const char *project_id, const char *location,
                      const char *registry_id, const char *device_id,
                      const char *private_key);
 
-  CloudIoTCoreDevice &setProjectId(const char *project_id);
-  CloudIoTCoreDevice &setLocation(const char *location);
-  CloudIoTCoreDevice &setRegistryId(const char *registry_id);
-  CloudIoTCoreDevice &setDeviceId(const char *device_id);
-  CloudIoTCoreDevice &setPrivateKey(const char *private_key);
   void setJwtExpSecs(int exp_in_secs);
 
-  String createJWT(long long int time);
-  String createJWT(long long int time, int jwt_in_time);
-  String getJWT();
+  /* Get a valid JWT */
+  const char* getJWT();
+
+  void invalidateJWT();
 
   /* HTTP methods path */
-  String getConfigPath(int version);
-  String getLastConfigPath();
-  String getSendTelemetryPath();
-  String getSetStatePath();
+  void getConfigPath(int version, char* out);
+  //String getLastConfigPath();
+  void getSendTelemetryPath(char* out);
+  void getSetStatePath(char* out);
 
   /* MQTT methods */
-  String getClientId();
-  String getCommandsTopic();
-  String getConfigTopic();
-  String getDeviceId();
-  String getEventsTopic();
-  String getStateTopic();
+  void getClientId(char* out);
+  void getCommandsTopic(char* out);
+  void getConfigTopic(char* out);
+  void getDeviceId(char* out);
+  void getEventsTopic(char* out);
+  void getStateTopic(char* out);
 };
 #endif  // CloudIoTCoreDevice_h

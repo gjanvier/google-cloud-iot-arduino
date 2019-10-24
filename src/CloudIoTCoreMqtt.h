@@ -22,15 +22,13 @@
 
 class CloudIoTCoreMqtt {
   private:
-    int __backoff__ = 1000; // current backoff, milliseconds
-    int __factor__ = 2.5f;
-    int __minbackoff__ = 1000; // minimum backoff, ms
-    int __max_backoff__ = 60000; // maximum backoff, ms
+    long __backoff__ = 1000; // current backoff, milliseconds
+    float __factor__ = 2.5;
+    long __minbackoff__ = 1000; // minimum backoff, ms
+    long __max_backoff__ = 60000; // maximum backoff, ms
     int __jitter__ = 500; // max random jitter, ms
-    unsigned long iss = 0;
     boolean logConnect = true;
     boolean useLts = false;
-    String jwt;
 
     MQTTClient *mqttClient;
     Client *netClient;
@@ -40,11 +38,11 @@ class CloudIoTCoreMqtt {
     CloudIoTCoreMqtt(MQTTClient *mqttClient, Client *netClient, CloudIoTCoreDevice *device);
 
     void startMQTT();
-    bool publishTelemetry(String data);
+    //bool publishTelemetry(String data);
     bool publishTelemetry(const char* data, int length);
-    bool publishTelemetry(String subtopic, String data);
-    bool publishTelemetry(String subtopic, const char* data, int length);
-    bool publishState(String data);
+    //bool publishTelemetry(String subtopic, String data);
+    //bool publishTelemetry(String subtopic, const char* data, int length);
+    //bool publishState(String data);
     bool publishState(const char* data, int length);
     void onConnect();
     void setLogConnect(boolean enabled);

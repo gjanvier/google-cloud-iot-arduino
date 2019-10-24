@@ -14,7 +14,7 @@
  */
 #include "ecdsa.h"
 #include "prng.h"
-#include <stdlib.h>
+//#include <stdlib.h>
 
 #define TRUE 1
 #define FALSE 0

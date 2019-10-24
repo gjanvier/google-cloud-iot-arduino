@@ -14,8 +14,9 @@
  *****************************************************************************/
 #include "CloudIoTCoreMqtt.h"
 
+#include <cstring>
+
 // Forward global callback declarations
-String getJwt();
 void messageReceived(String &topic, String &payload);
 
 
@@ -23,26 +24,31 @@ void messageReceived(String &topic, String &payload);
 // MQTT common functions
 ///////////////////////////////
 CloudIoTCoreMqtt::CloudIoTCoreMqtt(
-    MQTTClient *_mqttClient, Client *_netClient, CloudIoTCoreDevice *_device){
+    MQTTClient *_mqttClient, Client *_netClient, CloudIoTCoreDevice *_device)
+{
   this->mqttClient = _mqttClient;
   this->netClient = _netClient;
   this->device = _device;
 }
 
-void CloudIoTCoreMqtt::setLogConnect(boolean enabled) {
+void CloudIoTCoreMqtt::setLogConnect(boolean enabled)
+{
   this->logConnect = enabled;
 }
 
-void CloudIoTCoreMqtt::setUseLts(boolean enabled) {
+void CloudIoTCoreMqtt::setUseLts(boolean enabled)
+{
   this->useLts = enabled;
 }
 
-void CloudIoTCoreMqtt::startMQTT() {
+void CloudIoTCoreMqtt::startMQTT()
+{
   if (this->useLts) {
     //TODO: Debugging
     //Serial.println("Connect with " + String(CLOUD_IOT_CORE_MQTT_HOST_LTS) + ":" + String(CLOUD_IOT_CORE_MQTT_PORT));
     this->mqttClient->begin(CLOUD_IOT_CORE_MQTT_HOST_LTS, CLOUD_IOT_CORE_MQTT_PORT, *netClient);
-  } else {
+  }
+  else {
     //TODO: Debugging
     //Serial.println("Connect with " + String(CLOUD_IOT_CORE_MQTT_HOST_LTS) + ":" + String(CLOUD_IOT_CORE_MQTT_PORT));
     this->mqttClient->begin(CLOUD_IOT_CORE_MQTT_HOST, CLOUD_IOT_CORE_MQTT_PORT, *netClient);
@@ -50,35 +56,48 @@ void CloudIoTCoreMqtt::startMQTT() {
   this->mqttClient->onMessage(messageReceived);
 }
 
-bool CloudIoTCoreMqtt::publishTelemetry(String data) {
-  return this->mqttClient->publish(device->getEventsTopic(), data);
+// bool CloudIoTCoreMqtt::publishTelemetry(String data)
+// {
+//   char topic[64];
+//   device->getEventsTopic(topic);
+//   return this->mqttClient->publish(topic, data);
+// }
+
+bool CloudIoTCoreMqtt::publishTelemetry(const char* data, int length)
+{
+  char topic[64];
+  device->getEventsTopic(topic);
+  return this->mqttClient->publish(topic, data, length);
 }
 
-bool CloudIoTCoreMqtt::publishTelemetry(const char* data, int length) {
-  return this->mqttClient->publish(device->getEventsTopic().c_str(), data, length);
-}
+// bool CloudIoTCoreMqtt::publishTelemetry(String subtopic, String data) {
+//   return this->mqttClient->publish(device->getEventsTopic() + subtopic, data);
+// }
 
-bool CloudIoTCoreMqtt::publishTelemetry(String subtopic, String data) {
-  return this->mqttClient->publish(device->getEventsTopic() + subtopic, data);
-}
-
-bool CloudIoTCoreMqtt::publishTelemetry(String subtopic, const char* data, int length) {
-  return this->mqttClient->publish(String(device->getEventsTopic() + subtopic).c_str(), data, length);
-}
+// bool CloudIoTCoreMqtt::publishTelemetry(String subtopic, const char* data, int length) {
+//   return this->mqttClient->publish(String(device->getEventsTopic() + subtopic).c_str(), data, length);
+// }
 
 // Helper that just sends default sensor
-bool CloudIoTCoreMqtt::publishState(String data) {
-  return this->mqttClient->publish(device->getStateTopic(), data);
-}
+// bool CloudIoTCoreMqtt::publishState(String data)
+// {
+//   char topic[64];
+//   device->getStateTopic(topic);
+//   return this->mqttClient->publish(topic, data);
+// }
 
-bool CloudIoTCoreMqtt::publishState(const char* data, int length) {
-  return this->mqttClient->publish(device->getStateTopic().c_str(), data, length);
+bool CloudIoTCoreMqtt::publishState(const char* data, int length)
+{
+  char topic[64];
+  device->getStateTopic(topic);
+  return this->mqttClient->publish(topic, data, length);
 }
 
 void CloudIoTCoreMqtt::onConnect() {
   if (logConnect) {
-    publishState("connected");
-    publishTelemetry("/events", device->getDeviceId() + String("-connected"));
+    char* state = "connected";
+    publishState(state, strlen(state));
+    //publishTelemetry("/events", device->getDeviceId() + String("-connected"));
   }
 }
 
@@ -147,11 +166,11 @@ void CloudIoTCoreMqtt::logReturnCode() {
       break;
     case (LWMQTT_BAD_USERNAME_OR_PASSWORD):
       Serial.println("LWMQTT_BAD_USERNAME_OR_PASSWORD");
-      iss = 0; // Force JWT regeneration
+      device->invalidateJWT();
       break;
     case (LWMQTT_NOT_AUTHORIZED):
       Serial.println("LWMQTT_NOT_AUTHORIZED");
-      iss = 0; // Force JWT regeneration
+      device->invalidateJWT();
       break;
     case (LWMQTT_UNKNOWN_RETURN_CODE):
       Serial.println("LWMQTT_UNKNOWN_RETURN_CODE");
@@ -165,8 +184,12 @@ void CloudIoTCoreMqtt::logReturnCode() {
 void CloudIoTCoreMqtt::mqttConnect(bool skip) {
   Serial.print("\nconnecting...");
   bool keepgoing = true;
+  char client_id[200];
+  char topic[64];
+  device->getClientId(client_id);
+
   while (keepgoing) {
-    this->mqttClient->connect(device->getClientId().c_str(), "unused", getJwt().c_str(), skip);
+    this->mqttClient->connect(client_id, "unused", device->getJWT(), skip);
 
     if (this->mqttClient->lastError() != LWMQTT_SUCCESS){
       logError();
@@ -183,7 +206,9 @@ void CloudIoTCoreMqtt::mqttConnect(bool skip) {
       // Clean up the client
       this->mqttClient->disconnect();
       skip = false;
-      Serial.println("Delaying " + String(this->__backoff__) + "ms");
+      Serial.print("Delaying ");
+      Serial.print(this->__backoff__);
+      Serial.println("ms");
       delay(this->__backoff__);
       keepgoing = true;
     } else {
@@ -195,9 +220,11 @@ void CloudIoTCoreMqtt::mqttConnect(bool skip) {
   }
 
   // Set QoS to 1 (ack) for configuration messages
-  this->mqttClient->subscribe(device->getConfigTopic(), 1);
+  device->getConfigTopic(topic);
+  this->mqttClient->subscribe(topic, 1);
   // QoS 0 (no ack) for commands
-  this->mqttClient->subscribe(device->getCommandsTopic(), 0);
+  device->getCommandsTopic(topic);
+  this->mqttClient->subscribe(topic, 0);
 
   onConnect();
 }

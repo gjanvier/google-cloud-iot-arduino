@@ -14,95 +14,127 @@
  *****************************************************************************/
 
 #include "CloudIoTCoreDevice.h"
+#include <stdio.h>
+#include <cstring>
 #include "jwt.h"
 
-CloudIoTCoreDevice::CloudIoTCoreDevice() {}
 
-CloudIoTCoreDevice::CloudIoTCoreDevice(const char *project_id,
-                                       const char *location,
-                                       const char *registry_id,
-                                       const char *device_id) {
-  setProjectId(project_id);
-  setLocation(location);
-  setRegistryId(registry_id);
-  setDeviceId(device_id);
+CloudIoTCoreDevice::CloudIoTCoreDevice(const char *_project_id,
+                                       const char *_location,
+                                       const char *_registry_id,
+                                       const char *_device_id,
+                                       const char *_private_key)
+{
+  strcpy(this->project_id, _project_id);
+  strcpy(this->location, _location);
+  strcpy(this->registry_id, _registry_id);
+  strcpy(this->device_id, _device_id);
+  setPrivateKey(_private_key);
 }
 
-CloudIoTCoreDevice::CloudIoTCoreDevice(const char *project_id,
-                                       const char *location,
-                                       const char *registry_id,
-                                       const char *device_id,
-                                       const char *private_key) {
-  setProjectId(project_id);
-  setLocation(location);
-  setRegistryId(registry_id);
-  setDeviceId(device_id);
-  setPrivateKey(private_key);
+void CloudIoTCoreDevice::createJWT(long long int current_time)
+{
+  // Disable software watchdog as these operations can take a while.
+  ESP.wdtDisable();
+  Serial.println("Refreshing JWT");
+
+  create_jwt(jwt, project_id, current_time, priv_key, jwt_exp_secs);
+  iss = current_time;
+  exp = current_time + jwt_exp_secs;
+
+  Serial.println(jwt);
+
+  ESP.wdtEnable(0);
 }
 
-String CloudIoTCoreDevice::createJWT(long long int current_time) {
-  jwt = CreateJwt(project_id, current_time, priv_key, this->jwt_exp_secs);
+const char* CloudIoTCoreDevice::getJWT()
+{
+  long long int current_time = time(nullptr);
+  if (0 == iss || exp + 1*60 < current_time) {
+    createJWT(current_time);
+  }
   return jwt;
 }
 
-String CloudIoTCoreDevice::createJWT(long long int current_time, int exp_in_secs) {
-  jwt = CreateJwt(project_id, current_time, priv_key, exp_in_secs);
-  return jwt;
+
+void CloudIoTCoreDevice::invalidateJWT()
+{
+  iss = 0;
+  exp = 0;
 }
 
-String CloudIoTCoreDevice::getJWT() {
-  return jwt;
+void CloudIoTCoreDevice::getFullPath(const char* path, char* out)
+{
+  sprintf(out, "/v1/projects/%s/locations/%s/registries/%s/devices/%s%s",
+      project_id, location, registry_id, device_id, path);
 }
 
-String CloudIoTCoreDevice::getBasePath() {
-  return String("/v1/projects/") + project_id + "/locations/" + location +
-         "/registries/" + registry_id + "/devices/" + device_id;
+void CloudIoTCoreDevice::getClientId(char* out)
+{
+  sprintf(out, "projects/%s/locations/%s/registries/%s/devices/%s",
+    project_id, location, registry_id, device_id);
 }
 
-String CloudIoTCoreDevice::getClientId(){
-  return String("projects/") + project_id + "/locations/" + location +
-         "/registries/" + registry_id + "/devices/" + device_id;
+void CloudIoTCoreDevice::getConfigTopic(char* out)
+{
+  sprintf(out, "/devices/%s/config", device_id);
 }
 
-String CloudIoTCoreDevice::getConfigTopic(){
-  return String("/devices/") + device_id + "/config";
+void CloudIoTCoreDevice::getCommandsTopic(char* out)
+{
+  sprintf(out, "/devices/%s/commands/#", device_id);
 }
 
-String CloudIoTCoreDevice::getCommandsTopic(){
-  return String("/devices/") + device_id + "/commands/#";
+void CloudIoTCoreDevice::getDeviceId(char* out)
+{
+  sprintf(out, "%s", device_id);
 }
 
-String CloudIoTCoreDevice::getDeviceId(){
-  return String(device_id);
+void CloudIoTCoreDevice::getEventsTopic(char* out)
+{
+  sprintf(out, "/devices/%s/events", device_id);
 }
 
-String CloudIoTCoreDevice::getEventsTopic(){
-  return String("/devices/") + device_id + "/events";
+void CloudIoTCoreDevice::getStateTopic(char* out)
+{
+  sprintf(out, "/devices/%s/state", device_id);
 }
 
-String CloudIoTCoreDevice::getStateTopic(){
-  return String("/devices/") + device_id + "/state";
+void CloudIoTCoreDevice::getConfigPath(int version, char* out)
+{
+  char path[40];
+  sprintf(path, "/config?local_version=%d", version);
+  getFullPath(path, out);
 }
 
-String CloudIoTCoreDevice::getConfigPath(int version) {
-  char buf[8] = {0};
-  itoa(version, buf, 10);
-  return this->getBasePath() + "/config?local_version=" + buf;
+// String CloudIoTCoreDevice::getLastConfigPath() {
+//   return this->getConfigPath(0);
+// }
+
+void CloudIoTCoreDevice::getSendTelemetryPath(char* out)
+{
+  getFullPath(":publishEvent", out);
 }
 
-String CloudIoTCoreDevice::getLastConfigPath() {
-  return this->getConfigPath(0);
+void CloudIoTCoreDevice::getSetStatePath(char* out)
+{
+  getFullPath(":setState", out);
 }
 
-String CloudIoTCoreDevice::getSendTelemetryPath() {
-  return this->getBasePath() + ":publishEvent";
+void CloudIoTCoreDevice::setJwtExpSecs(int exp_in_secs) {
+  this->jwt_exp_secs = exp_in_secs;
 }
 
-String CloudIoTCoreDevice::getSetStatePath() {
-  return this->getBasePath() + ":setState";
-}
+CloudIoTCoreDevice &CloudIoTCoreDevice::setPrivateKey(const char *private_key)
+{
+  size_t length = strlen(private_key);
+  if (length != 95) {
+    Serial.print("Warning: expected private key to be 95, was: ");
+    Serial.println(length);
+    return *this;
+  }
 
-void CloudIoTCoreDevice::fillPrivateKey() {
+  // fillPrivateKey();
   priv_key[8] = 0;
   for (int i = 7; i >= 0; i--) {
     priv_key[i] = 0;
@@ -111,38 +143,6 @@ void CloudIoTCoreDevice::fillPrivateKey() {
       private_key += 3;
     }
   }
-}
 
-void CloudIoTCoreDevice::setJwtExpSecs(int exp_in_secs) {
-  this->jwt_exp_secs = exp_in_secs;
-}
-
-CloudIoTCoreDevice &CloudIoTCoreDevice::setProjectId(const char *project_id) {
-  this->project_id = project_id;
-  return *this;
-}
-
-CloudIoTCoreDevice &CloudIoTCoreDevice::setLocation(const char *location) {
-  this->location = location;
-  return *this;
-}
-
-CloudIoTCoreDevice &CloudIoTCoreDevice::setRegistryId(const char *registry_id) {
-  this->registry_id = registry_id;
-  return *this;
-}
-
-CloudIoTCoreDevice &CloudIoTCoreDevice::setDeviceId(const char *device_id) {
-  this->device_id = device_id;
-  return *this;
-}
-
-CloudIoTCoreDevice &CloudIoTCoreDevice::setPrivateKey(const char *private_key) {
-  this->private_key = private_key;
-  if ( strlen(private_key) != (95) ) {
-    Serial.println("Warning: expected private key to be 95, was: " + 
-        String(strlen(private_key)));
-  }
-  fillPrivateKey();
   return *this;
 }

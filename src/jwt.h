@@ -19,7 +19,8 @@
 #include <Arduino.h>
 #include "crypto/nn.h"
 
-String CreateJwt(String project_id, long long int time, NN_DIGIT* priv_key);
-String CreateJwt(String project_id, long long int time, NN_DIGIT* priv_key, int JWT_EXP_SECS);
+#define JWT_MAX_LENGTH          256
+
+void create_jwt(char* jwt, const char* project_id, long long int time, NN_DIGIT* priv_key, int jwt_exp_secs);
 
 #endif  // JWT_H_

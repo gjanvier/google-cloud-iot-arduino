@@ -14,6 +14,7 @@
  *****************************************************************************/
 
 #include <stdio.h>
+#include <cstring>
 
 #include "crypto/ecdsa.h"
 #include "crypto/nn.h"
@@ -21,14 +22,14 @@
 #include "jwt.h"
 
 // base64_encode copied from https://github.com/ReneNyffenegger/cpp-base64
-static const String base64_chars =
+static const char* base64_chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
     "0123456789+/";
 
-String base64_encode(const unsigned char *bytes_to_encode,
-                     unsigned int in_len) {
-  String ret;
+void base64_encode(const char *bytes_to_encode, unsigned int in_len,
+                   char *out)
+{
   int i = 0;
   int j = 0;
   unsigned char char_array_3[3];
@@ -45,7 +46,8 @@ String base64_encode(const unsigned char *bytes_to_encode,
       char_array_4[3] = char_array_3[2] & 0x3f;
 
       for (i = 0; (i < 4); i++) {
-        ret += base64_chars[char_array_4[i]];
+        *out = base64_chars[char_array_4[i]];
+        out++;
       }
       i = 0;
     }
@@ -64,37 +66,29 @@ String base64_encode(const unsigned char *bytes_to_encode,
     char_array_4[3] = char_array_3[2] & 0x3f;
 
     for (j = 0; (j < i + 1); j++) {
-      ret += base64_chars[char_array_4[j]];
+      *out = base64_chars[char_array_4[j]];
+      out++;
     }
 
     while ((i++ < 3)) {
-      ret += '=';
+      *out = '=';
+      out++;
     }
   }
-
-  return ret;
 }
 
-String base64_encode(String str) {
-  return base64_encode((const unsigned char *)str.c_str(), str.length());
-}
-
-// Get's sha256 of str.
-String get_sha(const String& str) {
+// Get's sha256 of str. digest must have size SHA256_DIGEST_LENGTH
+void get_sha(const char* str, unsigned char* digest)
+{
   Sha256 sha256Instance;
-
-  sha256Instance.update((const unsigned char *)str.c_str(), str.length());
-
-  unsigned char sha256[SHA256_DIGEST_LENGTH];
-
-  sha256Instance.final(sha256);
-
-  return String((const char*)sha256);
+  sha256Instance.update((const unsigned char*)str, strlen(str));
+  sha256Instance.final(digest);
 }
 
 // Get base64 signature string from the signature_r and signature_s ecdsa
 // signature.
-String MakeBase64Signature(NN_DIGIT *signature_r, NN_DIGIT *signature_s) {
+void make_base64_signature(NN_DIGIT *signature_r, NN_DIGIT *signature_s, char *out)
+{
   unsigned char signature[64];
   NN_Encode(signature, (NUMWORDS - 1) * NN_DIGIT_LEN, signature_r,
             (NN_UINT)(NUMWORDS - 1));
@@ -102,27 +96,41 @@ String MakeBase64Signature(NN_DIGIT *signature_r, NN_DIGIT *signature_s) {
             (NUMWORDS - 1) * NN_DIGIT_LEN, signature_s,
             (NN_UINT)(NUMWORDS - 1));
 
-  return base64_encode(signature, 64);
+  base64_encode((char*)signature, 64, out);
 }
 
-// Convert an integer to a string.
-String int_to_string(long long int x) {
-  char buf[20];
-  snprintf(buf, 20, "%d", (int)x);
-  return String(buf);
-}
 
-String CreateJwt(String project_id, long long int time, NN_DIGIT *priv_key, int lib_jwt_exp_secs) {
+void create_jwt(char* jwt, const char* project_id, long long int time, NN_DIGIT* priv_key, int jwt_exp_secs)
+{
+  char* current = jwt;
+  memset(jwt, 0, JWT_MAX_LENGTH);
+
   ecc_init();
-  // Making jwt token json
-  String header = "{\"alg\":\"ES256\",\"typ\":\"JWT\"}";
-  String payload = "{\"iat\":" + int_to_string(time) +
-                   ",\"exp\":" + int_to_string(time + lib_jwt_exp_secs) + ",\"aud\":\"" +
-                   project_id + "\"}";
-  String header_payload_base64 =
-      base64_encode(header) + "." + base64_encode(payload);
 
-  String sha256 = get_sha(header_payload_base64);
+  // Header
+  const char* header = "{\"alg\":\"ES256\",\"typ\":\"JWT\"}";
+  Serial.println(header);
+  base64_encode(header, strlen(header), current);
+  current += strlen(current);
+
+  *current = '.';
+  current++;
+
+  // Payload
+  char payload[100];
+  memset(payload, 0, 100);
+  sprintf(payload, "{\"iat\":%lld,\"exp\":%lld,\"aud\":\"%s\"}",
+           (long long int)time,  // iat
+           (long long int)(time + jwt_exp_secs),  // exp
+           project_id);  // aud
+  Serial.println(payload);
+  base64_encode(payload, strlen(payload), current);
+  current += strlen(current);
+
+  // sha256
+  unsigned char sha256[SHA256_DIGEST_LENGTH];
+  Serial.println(jwt);
+  get_sha(jwt, sha256);
 
   // Signing sha with ec key. Bellow is the ec private key.
   point_t pub_key;
@@ -131,12 +139,10 @@ String CreateJwt(String project_id, long long int time, NN_DIGIT *priv_key, int 
   ecdsa_init(&pub_key);
 
   NN_DIGIT signature_r[NUMWORDS], signature_s[NUMWORDS];
-  ecdsa_sign((uint8_t *)sha256.c_str(), signature_r, signature_s, priv_key);
+  ecdsa_sign(sha256, signature_r, signature_s, priv_key);
 
-  return header_payload_base64 + "." +
-         MakeBase64Signature(signature_r, signature_s);
-}
+  *current = '.';
+  current++;
 
-String CreateJwt(String project_id, long long int time, NN_DIGIT *priv_key) {
-  return CreateJwt(project_id, time, priv_key, 3600); // one hour default
+  make_base64_signature(signature_r, signature_s, current);
 }

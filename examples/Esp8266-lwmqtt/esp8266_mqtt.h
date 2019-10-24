@@ -31,7 +31,10 @@
 // Place your message handler code here.
 void messageReceived(String &topic, String &payload)
 {
-  Serial.println("incoming: " + topic + " - " + payload);
+  Serial.print("incoming: ");
+  Serial.print(topic);
+  Serial.print(" - ");
+  Serial.println(payload);
 }
 ///////////////////////////////
 
@@ -41,27 +44,25 @@ BearSSL::WiFiClientSecure *netClient;
 BearSSL::X509List certList;
 CloudIoTCoreDevice *device;
 CloudIoTCoreMqtt *mqtt;
-unsigned long iss = 0;
-String jwt;
 
 ///////////////////////////////
 // Helpers specific to this board
 ///////////////////////////////
-String getDefaultSensor()
-{
-  return "Wifi: " + String(WiFi.RSSI()) + "db";
-}
+// String getDefaultSensor()
+// {
+//   return "Wifi: " + String(WiFi.RSSI()) + "db";
+// }
 
-String getJwt()
-{
-  // Disable software watchdog as these operations can take a while.
-  ESP.wdtDisable();
-  iss = time(nullptr);
-  Serial.println("Refreshing JWT");
-  jwt = device->createJWT(iss, jwt_exp_secs);
-  ESP.wdtEnable(0);
-  return jwt;
-}
+// String getJwt()
+// {
+//   // Disable software watchdog as these operations can take a while.
+//   ESP.wdtDisable();
+//   iss = time(nullptr);
+//   Serial.println("Refreshing JWT");
+//   jwt = device->createJWT(iss, jwt_exp_secs);
+//   ESP.wdtEnable(0);
+//   return jwt;
+// }
 
 void setupCert()
 {
@@ -136,25 +137,25 @@ void connectWifi()
 ///////////////////////////////
 // Orchestrates various methods from preceeding code.
 ///////////////////////////////
-void publishTelemetry(String data)
-{
-  mqtt->publishTelemetry(data);
-}
+// void publishTelemetry(String data)
+// {
+//   mqtt->publishTelemetry(data);
+// }
 
 void publishTelemetry(const char *data, int length)
 {
   mqtt->publishTelemetry(data, length);
 }
 
-void publishTelemetry(String subfolder, String data)
-{
-  mqtt->publishTelemetry(subfolder, data);
-}
+// void publishTelemetry(String subfolder, String data)
+// {
+//   mqtt->publishTelemetry(subfolder, data);
+// }
 
-void publishTelemetry(String subfolder, const char *data, int length)
-{
-  mqtt->publishTelemetry(subfolder, data, length);
-}
+// void publishTelemetry(String subfolder, const char *data, int length)
+// {
+//   mqtt->publishTelemetry(subfolder, data, length);
+// }
 
 void connect()
 {
