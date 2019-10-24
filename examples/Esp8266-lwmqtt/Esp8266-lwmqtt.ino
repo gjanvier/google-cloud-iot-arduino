@@ -36,7 +36,7 @@ void setup()
 unsigned long lastMillis = 0;
 void loop()
 {
-  char* data;
+  char data[100];
   mqttClient->loop();
 
   delay(10); // <- fixes some issues with WiFi stability
@@ -52,7 +52,9 @@ void loop()
   if (millis() - lastMillis > 60000)
   {
     lastMillis = millis();
-    data = "getDefaultSensor()";
+    getDefaultSensor(data);
+    Serial.print("sending: ");
+    Serial.println(data);
     publishTelemetry(data, strlen(data));
   }
 }

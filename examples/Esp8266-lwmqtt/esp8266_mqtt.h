@@ -16,6 +16,8 @@
 #ifndef __ESP8266_MQTT_H__
 #define __ESP8266_MQTT_H__
 #include <ESP8266WiFi.h>
+
+#include <cstring>
 #include "FS.h"
 #include "WiFiClientSecureBearSSL.h"
 #include <time.h>
@@ -48,21 +50,10 @@ CloudIoTCoreMqtt *mqtt;
 ///////////////////////////////
 // Helpers specific to this board
 ///////////////////////////////
-// String getDefaultSensor()
-// {
-//   return "Wifi: " + String(WiFi.RSSI()) + "db";
-// }
-
-// String getJwt()
-// {
-//   // Disable software watchdog as these operations can take a while.
-//   ESP.wdtDisable();
-//   iss = time(nullptr);
-//   Serial.println("Refreshing JWT");
-//   jwt = device->createJWT(iss, jwt_exp_secs);
-//   ESP.wdtEnable(0);
-//   return jwt;
-// }
+void getDefaultSensor(char* data)
+{
+  sprintf(data, "{\"rssi\":%d}", WiFi.RSSI());
+}
 
 void setupCert()
 {

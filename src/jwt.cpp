@@ -129,7 +129,6 @@ void create_jwt(char* jwt, const char* project_id, long long int time, NN_DIGIT*
 
   // sha256
   unsigned char sha256[SHA256_DIGEST_LENGTH];
-  Serial.println(jwt);
   get_sha(jwt, sha256);
 
   // Signing sha with ec key. Bellow is the ec private key.
