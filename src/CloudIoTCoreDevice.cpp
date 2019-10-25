@@ -56,17 +56,10 @@ const char* CloudIoTCoreDevice::getJWT()
   return jwt;
 }
 
-
 void CloudIoTCoreDevice::invalidateJWT()
 {
   iss = 0;
   exp = 0;
-}
-
-void CloudIoTCoreDevice::getFullPath(const char* path, char* out)
-{
-  sprintf(out, "/v1/projects/%s/locations/%s/registries/%s/devices/%s%s",
-      project_id, location, registry_id, device_id, path);
 }
 
 void CloudIoTCoreDevice::getClientId(char* out)
@@ -75,29 +68,17 @@ void CloudIoTCoreDevice::getClientId(char* out)
     project_id, location, registry_id, device_id);
 }
 
-void CloudIoTCoreDevice::getConfigTopic(char* out)
-{
-  sprintf(out, "/devices/%s/config", device_id);
-}
-
-void CloudIoTCoreDevice::getCommandsTopic(char* out)
-{
-  sprintf(out, "/devices/%s/commands/#", device_id);
-}
-
 void CloudIoTCoreDevice::getDeviceId(char* out)
 {
   sprintf(out, "%s", device_id);
 }
 
-void CloudIoTCoreDevice::getEventsTopic(char* out)
-{
-  sprintf(out, "/devices/%s/events", device_id);
-}
+/* HTTP methods path */
 
-void CloudIoTCoreDevice::getStateTopic(char* out)
+void CloudIoTCoreDevice::getFullPath(const char* path, char* out)
 {
-  sprintf(out, "/devices/%s/state", device_id);
+  sprintf(out, "/v1/projects/%s/locations/%s/registries/%s/devices/%s%s",
+      project_id, location, registry_id, device_id, path);
 }
 
 void CloudIoTCoreDevice::getConfigPath(int version, char* out)
@@ -119,6 +100,28 @@ void CloudIoTCoreDevice::getSendTelemetryPath(char* out)
 void CloudIoTCoreDevice::getSetStatePath(char* out)
 {
   getFullPath(":setState", out);
+}
+
+/* MQTT methods */
+
+void CloudIoTCoreDevice::getConfigTopic(char* out)
+{
+  sprintf(out, "/devices/%s/config", device_id);
+}
+
+void CloudIoTCoreDevice::getCommandsTopic(char* out)
+{
+  sprintf(out, "/devices/%s/commands/#", device_id);
+}
+
+void CloudIoTCoreDevice::getEventsTopic(char* out)
+{
+  sprintf(out, "/devices/%s/events", device_id);
+}
+
+void CloudIoTCoreDevice::getStateTopic(char* out)
+{
+  sprintf(out, "/devices/%s/state", device_id);
 }
 
 void CloudIoTCoreDevice::setJwtExpSecs(int exp_in_secs) {

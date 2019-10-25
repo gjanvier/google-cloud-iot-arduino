@@ -44,9 +44,11 @@ class CloudIoTCoreDevice {
 
   void setJwtExpSecs(int exp_in_secs);
 
+  void getClientId(char* out);
+  void getDeviceId(char* out);
+
   /* Get a valid JWT */
   const char* getJWT();
-
   void invalidateJWT();
 
   /* HTTP methods path */
@@ -56,10 +58,8 @@ class CloudIoTCoreDevice {
   void getSetStatePath(char* out);
 
   /* MQTT methods */
-  void getClientId(char* out);
   void getCommandsTopic(char* out);
   void getConfigTopic(char* out);
-  void getDeviceId(char* out);
   void getEventsTopic(char* out);
   void getStateTopic(char* out);
 };
