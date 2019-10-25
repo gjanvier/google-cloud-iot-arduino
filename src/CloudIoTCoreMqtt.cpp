@@ -70,6 +70,14 @@ bool CloudIoTCoreMqtt::publishTelemetry(const char* data, int length)
   return this->mqttClient->publish(topic, data, length);
 }
 
+bool CloudIoTCoreMqtt::publishTelemetry(const char* subtopic, const char* data, int length)
+{
+  char topic[128];
+  device->getEventsTopic(topic);
+  strcat(topic, subtopic);
+  return this->mqttClient->publish(topic, data, length);
+}
+
 // bool CloudIoTCoreMqtt::publishTelemetry(String subtopic, String data) {
 //   return this->mqttClient->publish(device->getEventsTopic() + subtopic, data);
 // }
