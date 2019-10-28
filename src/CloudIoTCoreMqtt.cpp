@@ -17,7 +17,7 @@
 #include <cstring>
 
 // Forward global callback declarations
-void messageReceived(String &topic, String &payload);
+extern void messageReceived(String &topic, String &payload);
 
 
 ///////////////////////////////
