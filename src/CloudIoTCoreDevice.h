@@ -21,12 +21,12 @@
 
 class CloudIoTCoreDevice {
  private:
-  char project_id[32];
-  char location[32];
-  char registry_id[32];
-  char device_id[32];
+  char project_id[32] = {0};
+  char location[32] = {0};
+  char registry_id[32] = {0};
+  char device_id[32] = {0};
 
-  NN_DIGIT priv_key[9];
+  NN_DIGIT priv_key[9] = {0};
 
   char jwt[JWT_MAX_LENGTH];
   unsigned long iss = 0;
@@ -38,9 +38,9 @@ class CloudIoTCoreDevice {
   void getFullPath(const char* path, char* out);
 
  public:
-  CloudIoTCoreDevice(const char *project_id, const char *location,
-                     const char *registry_id, const char *device_id,
-                     const char *private_key);
+  void init(const char *project_id, const char *location,
+            const char *registry_id, const char *device_id,
+            const char *private_key);
 
   void setJwtExpSecs(int exp_in_secs);
 

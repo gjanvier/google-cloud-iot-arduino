@@ -37,11 +37,11 @@ unsigned long lastMillis = 0;
 void loop()
 {
   char data[100];
-  mqttClient->loop();
+  mqttClient.loop();
 
   delay(10); // <- fixes some issues with WiFi stability
 
-  if (!mqttClient->connected())
+  if (!mqttClient.connected())
   {
     ESP.wdtDisable();
     connect();

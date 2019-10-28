@@ -19,17 +19,19 @@
 #include "jwt.h"
 
 
-CloudIoTCoreDevice::CloudIoTCoreDevice(const char *_project_id,
-                                       const char *_location,
-                                       const char *_registry_id,
-                                       const char *_device_id,
-                                       const char *_private_key)
+void CloudIoTCoreDevice::init(
+    const char *_project_id,
+    const char *_location,
+    const char *_registry_id,
+    const char *_device_id,
+    const char *_private_key)
 {
   strcpy(this->project_id, _project_id);
   strcpy(this->location, _location);
   strcpy(this->registry_id, _registry_id);
   strcpy(this->device_id, _device_id);
   setPrivateKey(_private_key);
+  invalidateJWT();
 }
 
 void CloudIoTCoreDevice::createJWT(long long int current_time)

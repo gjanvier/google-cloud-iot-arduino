@@ -41,11 +41,11 @@ void messageReceived(String &topic, String &payload)
 ///////////////////////////////
 
 // Initialize WiFi and MQTT for this board
-MQTTClient *mqttClient;
-BearSSL::WiFiClientSecure *netClient;
+BearSSL::WiFiClientSecure netClient;
 BearSSL::X509List certList;
-CloudIoTCoreDevice *device;
-CloudIoTCoreMqtt *mqtt;
+CloudIoTCoreDevice device;
+MQTTClient mqttClient(512);
+CloudIoTCoreMqtt mqtt(&mqttClient, &netClient, &device);
 
 ///////////////////////////////
 // Helpers specific to this board
@@ -61,7 +61,7 @@ void setupCert()
   // If using a static (pem) cert, uncomment in ciotc_config.h:
   // certList.append(primary_ca);
   // certList.append(backup_ca);
-  // netClient->setTrustAnchors(&certList);
+  // netClient.setTrustAnchors(&certList);
   // return;
 
   // If using the (preferred) method with the cert in /data (SPIFFS)
@@ -94,7 +94,7 @@ void setupCert()
     certList.append(strdup(ca.readString().c_str()));
   }
 
-  netClient->setTrustAnchors(&certList);
+  netClient.setTrustAnchors(&certList);
 }
 
 void setupWifi()
@@ -130,49 +130,46 @@ void connectWifi()
 ///////////////////////////////
 // void publishTelemetry(String data)
 // {
-//   mqtt->publishTelemetry(data);
+//   mqtt.publishTelemetry(data);
 // }
 
 void publishTelemetry(const char *data, int length)
 {
-  mqtt->publishTelemetry(data, length);
+  mqtt.publishTelemetry(data, length);
 }
 
 // void publishTelemetry(String subfolder, String data)
 // {
-//   mqtt->publishTelemetry(subfolder, data);
+//   mqtt.publishTelemetry(subfolder, data);
 // }
 
 // void publishTelemetry(String subfolder, const char *data, int length)
 // {
-//   mqtt->publishTelemetry(subfolder, data, length);
+//   mqtt.publishTelemetry(subfolder, data, length);
 // }
 
 void connect()
 {
-  mqtt->mqttConnect();
+  mqtt.mqttConnect();
 }
 
 // TODO: fix globals
 void setupCloudIoT()
 {
   // Create the device
-  device = new CloudIoTCoreDevice(
+  device.init(
       project_id, location, registry_id, device_id,
       private_key_str);
 
   // ESP8266 WiFi setup
-  netClient = new WiFiClientSecure();
   setupWifi();
 
   // ESP8266 WiFi secure initialization
   setupCert();
 
-  mqttClient = new MQTTClient(512);
-  mqttClient->setOptions(180, true, 1000); // keepAlive, cleanSession, timeout
-  mqtt = new CloudIoTCoreMqtt(mqttClient, netClient, device);
-  mqtt->setUseLts(true);
-  mqtt->startMQTT(); // Opens connection
+  mqttClient.setOptions(180, true, 1000); // keepAlive, cleanSession, timeout
+  mqtt.setUseLts(true);
+  mqtt.startMQTT(); // Opens connection
 }
 
 #endif //__ESP8266_MQTT_H__
